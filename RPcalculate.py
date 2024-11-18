@@ -29,10 +29,10 @@ class Efficiency:
         self.base_material_cost = {}
         self.electric = 0
         self.money_cost = 0
-        self.exp_per_base = {}
-        self.exp_per_electric = 0
-        self.exp_per_time = 0
-        self.exp_per_money = 0
+        self.per_base_mat = {}
+        self.per_electric = 0
+        self.per_time = 0
+        self.per_money = 0
 
 class Purchase:
     def __init__(self):
@@ -150,14 +150,27 @@ def calculate_efficiency(name):
             else:
                 print("error: {} no price".format(mat))
     effi_dict[name].base_material_cost = base_material_cost
-    for ingr in effi_dict[name].base_material_cost:
-        exp_per_ingr = manu_dict[name].exp / effi_dict[name].base_material_cost[ingr]
-        effi_dict[name].exp_per_base[ingr] = exp_per_ingr
-    exp_per_ele = manu_dict[name].exp / effi_dict[name].electric
-    effi_dict[name].exp_per_electric = exp_per_ele
-    exp_per_time = manu_dict[name].exp / effi_dict[name].manu_time
-    effi_dict[name].exp_per_time = exp_per_time
-    effi_dict[name].exp_per_money = manu_dict[name].exp / effi_dict[name].money_cost * 1000 if effi_dict[name].money_cost != 0 else 0
+    # for ingr in effi_dict[name].base_material_cost:
+    #     exp_per_ingr = manu_dict[name].exp / effi_dict[name].base_material_cost[ingr]
+    #     effi_dict[name].exp_per_base[ingr] = exp_per_ingr
+    # exp_per_ele = manu_dict[name].exp / effi_dict[name].electric
+    # effi_dict[name].exp_per_electric = exp_per_ele
+    # exp_per_time = manu_dict[name].exp / effi_dict[name].manu_time
+    # effi_dict[name].exp_per_time = exp_per_time
+    # effi_dict[name].exp_per_money = manu_dict[name].exp / effi_dict[name].money_cost * 1000 if effi_dict[name].money_cost != 0 else 0
+
+def calulate_target_per_resource(target):
+    for product in effi_dict:
+        value = 0
+        if target == 1:
+            value = manu_dict[product].exp
+        else:
+            value = manu_dict[product].order_price
+        effi_dict[product].per_electric = value / effi_dict[product].electric
+        effi_dict[product].per_time = value / effi_dict[product].manu_time
+        effi_dict[product].per_money = value / effi_dict[product].money_cost * 1000 if effi_dict[product].money_cost != 0 else 0
+        for ingr in effi_dict[product].base_material_cost:
+            effi_dict[product].per_base_mat[ingr] = value / effi_dict[product].base_material_cost[ingr]
 
 def calculate(enable_purchase):
     if enable_purchase:
@@ -169,27 +182,29 @@ def calculate(enable_purchase):
             calculate_efficiency(product)
 
 @click.command
+@click.option('--target', prompt="计算效率的目标 1.经验 2.订单利润", default=1)
 @click.option('--sort_key', prompt="请选择排序依据，电量、时间或某一种原料", default="电量")
 @click.option('--output_num', prompt="显示最高N位，0为全显示", default=0)
-def output(sort_key : str, output_num : int):
+def output(target, sort_key, output_num):
+    calulate_target_per_resource(target)
     effi_list = effi_dict.items()
     if sort_key == "电量":
-        effi_list = sorted(effi_list, key=lambda x : x[1].exp_per_electric, reverse=True)
+        effi_list = sorted(effi_list, key=lambda x : x[1].per_electric, reverse=True)
     elif sort_key == "时间":
-        effi_list = sorted(effi_list, key=lambda x : x[1].exp_per_time, reverse=True)
+        effi_list = sorted(effi_list, key=lambda x : x[1].per_time, reverse=True)
     elif sort_key == "钱":
-        effi_list = sorted(effi_list, key=lambda x : x[1].exp_per_money, reverse=True)
+        effi_list = sorted(effi_list, key=lambda x : x[1].per_money, reverse=True)
     else:
-        effi_list = sorted(effi_list, key=lambda x : x[1].exp_per_base[sort_key] if sort_key in x[1].exp_per_base else 0, reverse=True)
+        effi_list = sorted(effi_list, key=lambda x : x[1].per_base_mat[sort_key] if sort_key in x[1].per_base_mat else 0, reverse=True)
     for idx, (k, v) in enumerate(effi_list):
         if output_num and idx >= output_num:
             break
         print("#{} {}".format(idx+1, k))
-        for ingr in v.exp_per_base:
-            print("{} {:.5g}".format(ingr, v.exp_per_base[ingr]))
-        print("electric {:.5g} {:.5g}".format(v.electric, v.exp_per_electric))
-        print("time {:.5g}".format(v.exp_per_time))
-        print("money {:.5g} {:.5g}".format(v.money_cost, v.exp_per_money))
+        for ingr in v.per_base_mat:
+            print("{} {:.5g}".format(ingr, v.per_base_mat[ingr]))
+        print("electric {:.5g} {:.5g}".format(v.electric, v.per_electric))
+        print("time {:.5g}".format(v.per_time))
+        print("money {:.5g} {:.5g}".format(v.money_cost, v.per_money))
 
 if __name__ == '__main__':
     read_table("ResonancePrison.xlsx")
