@@ -183,7 +183,7 @@ def calculate(enable_purchase):
 
 @click.command
 @click.option('--target', prompt="计算效率的目标 1.经验 2.订单利润", default=1)
-@click.option('--sort_key', prompt="请选择排序依据，电量、时间或某一种原料", default="电量")
+@click.option('--sort_key', prompt="请选择排序依据，电量、时间、钱或某一种原料", default="电量")
 @click.option('--output_num', prompt="显示最高N位，0为全显示", default=0)
 def output(target, sort_key, output_num):
     calulate_target_per_resource(target)
